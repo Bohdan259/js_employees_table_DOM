@@ -14,19 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastColumn = null;
   let direction = 'asc';
 
-  const cities = new Set([]);
-
-  [...tbody.querySelectorAll('tr')].forEach((row) => {
-    cities.add(row.children[2].textContent.trim());
-  });
-
-  function capitalizeWords(str) {
-    return str
-      .split(' ')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
   function toUsd(num) {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -134,9 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = document.createElement('button');
 
     button.type = 'submit';
-    button.textContent = 'Save to Table';
+    button.textContent = 'Save to table';
 
     const allowed = ['Name', 'Position', 'Office', 'Age', 'Salary'];
+    const cities = [
+      'Tokyo',
+      'Singapore',
+      'London',
+      'New York',
+      'Edinburgh',
+      'San Francisco',
+    ];
 
     allowed.forEach((row) => {
       const attribute = row.toLocaleLowerCase();
@@ -154,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cities.forEach((city) => {
           const option = document.createElement('option');
 
-          option.value = city.toLowerCase();
+          option.value = city;
           option.textContent = city;
           select.append(option);
         });
@@ -192,10 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const clmn = document.createElement('td');
 
       clmn.textContent = value;
-
-      if (index === 2) {
-        clmn.textContent = capitalizeWords(value);
-      }
 
       if (index === 4) {
         clmn.textContent = toUsd(value);
