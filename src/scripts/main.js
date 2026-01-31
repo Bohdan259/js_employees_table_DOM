@@ -11,12 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const tbody = table.querySelector('tbody');
   const titles = table.querySelector('thead tr');
   const form = document.createElement('form');
+  let lastColumn = null;
+  let direction = 'asc';
 
-  const cities = new Set(['Select your Office']);
+  const cities = new Set([]);
 
   [...tbody.querySelectorAll('tr')].forEach((row) => {
     cities.add(row.children[2].textContent.trim());
   });
+
+  function capitalizeWords(str) {
+    return str
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
 
   function toUsd(num) {
     return new Intl.NumberFormat('en-US', {
@@ -50,19 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    if (lastColumn === columnIndex) {
+      direction = direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      direction = 'asc';
+    }
+    lastColumn = columnIndex;
+
     const rows = [...tbody.querySelectorAll('tr')];
-
-    if (!sortColumn.directions) {
-      sortColumn.directions = {};
-    }
-
-    if (!sortColumn.directions[columnIndex]) {
-      sortColumn.directions[columnIndex] = 'asc';
-    }
-
-    const direction = sortColumn.directions[columnIndex];
-
-    sortColumn.directions[columnIndex] = direction === 'asc' ? 'desc' : 'asc';
 
     rows.sort((tr1, tr2) => {
       if (columnIndex > 2) {
@@ -91,11 +95,11 @@ document.addEventListener('DOMContentLoaded', () => {
       },
       success: {
         title: 'Success!',
-        text: 'This employee is already in the table!',
+        text: 'Your data has been saved to the table!',
       },
       warning: {
         title: 'Warning!',
-        text: 'Your data has been saved to the table!',
+        text: 'This employee is already in the table!',
       },
     };
 
@@ -132,44 +136,45 @@ document.addEventListener('DOMContentLoaded', () => {
     button.type = 'submit';
     button.textContent = 'Save to Table';
 
-    [...titles.children].forEach((column, i) => {
+    const allowed = ['Name', 'Position', 'Office', 'Age', 'Salary'];
+
+    allowed.forEach((row) => {
+      const attribute = row.toLocaleLowerCase();
       const label = document.createElement('label');
 
-      label.textContent = column.textContent;
+      label.textContent = row;
 
-      if (i === 2) {
+      if (row === 'Office') {
         const select = document.createElement('select');
 
+        select.name = attribute;
+        select.setAttribute('data-qa', attribute);
         select.required = true;
-        label.append(select);
 
         cities.forEach((city) => {
           const option = document.createElement('option');
 
           option.value = city.toLowerCase();
-
-          if (city === 'Select your Office') {
-            option.value = '';
-          }
           option.textContent = city;
           select.append(option);
         });
+
+        select.selectedIndex = -1;
+        label.append(select);
       } else {
-        const title = column.textContent.trim().toLowerCase();
         const input = document.createElement('input');
 
-        input.name = title;
-        input.type = 'text';
-        input.setAttribute('data-qa', title);
+        input.name = attribute;
+        input.type = row === 'Age' || row === 'Salary' ? 'number' : 'text';
         input.required = true;
+        input.setAttribute('data-qa', attribute);
 
-        if (input.name === 'age' || input.name === 'salary') {
-          input.type = 'number';
-        }
         label.append(input);
       }
+
       form.append(label);
     });
+
     form.append(button);
   }
 
@@ -179,20 +184,18 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
 
     const data = [...new FormData(form).values()];
-    const select = document.querySelector('select');
-    const text = select.selectedOptions[0].textContent;
-
-    data.splice(2, 0, text);
-
     const tr = document.createElement('tr');
     const rows = [...tbody.querySelectorAll('tr')];
-    const column = rows.map((row) => row.children[0].textContent);
-    let newEmployee = true;
+    const columnName = rows.map((row) => row.children[0].textContent);
 
     data.forEach((value, index) => {
       const clmn = document.createElement('td');
 
       clmn.textContent = value;
+
+      if (index === 2) {
+        clmn.textContent = capitalizeWords(value);
+      }
 
       if (index === 4) {
         clmn.textContent = toUsd(value);
@@ -201,16 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (data[0].length < 4 || data[3] < 18 || data[3] > 90) {
-      newEmployee = false;
-      notification('error');
+      return notification('error');
     }
 
-    if (column.includes(data[0])) {
-      newEmployee = false;
-      notification('warning');
-    }
-
-    if (newEmployee === true) {
+    if (columnName.includes(data[0])) {
+      return notification('warning');
+    } else {
       tbody.append(tr);
       notification('success');
     }
